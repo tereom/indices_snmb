@@ -6,6 +6,9 @@ setwd("/LUSTRE/sacmod/indices_audio/complexity")
 
 load("2017-09-12_audible_info.RData")
 
+# wave_complexity calcula PE, MPR y nforbiden usando el paquete statcomp, 
+# se calcula un índice para cada minuto completo de la grabación
+
 wave_complexity <- function(path_wave, seconds_partition = 60){
     sound_wave <- readWave(path_wave)
     # l_min: number of entries per partition
@@ -15,8 +18,8 @@ wave_complexity <- function(path_wave, seconds_partition = 60){
     purrr::map(1:n, function(i) global_complexity(sound_wave@left[l_min * (i - 1) + 1 : l_min * i], ndemb = 6))
 }
 
+# parámetros en data.frame para la llamada de slurm_apply
 params_df <- dplyr::data_frame(path_wave = audible_info$lustre_path)
-
 sjob <- slurm_apply(wave_complexity, params = params_df, jobname = "complexity_job_2", 
     nodes = 3, cpus_per_node = 2, slurm_options = list(partition = "optimus", 
         nodes = "3", ntasks = "3"))
@@ -25,6 +28,7 @@ print_job_status(sjob)
 ### Read results
 complexity_vector <- list.files("_rslurm_complexity_job_2", "results", 
     full.names = TRUE) %>% 
-    map(readRDS) %>% unlist()
+    map(readRDS) %>% 
+    unlist()
 
 save(complexity_vector, file = "2017-09-15_complexity_vector.RData")
